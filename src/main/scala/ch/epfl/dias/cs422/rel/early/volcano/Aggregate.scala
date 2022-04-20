@@ -1,7 +1,7 @@
 package ch.epfl.dias.cs422.rel.early.volcano
 
 import ch.epfl.dias.cs422.helpers.builder.skeleton
-import ch.epfl.dias.cs422.helpers.rel.RelOperator.Tuple
+import ch.epfl.dias.cs422.helpers.rel.RelOperator.{Elem, NilTuple, Tuple}
 import ch.epfl.dias.cs422.helpers.rex.AggregateCall
 import org.apache.calcite.util.ImmutableBitSet
 
@@ -31,15 +31,60 @@ class Aggregate protected (
   /**
     * @inheritdoc
     */
-  override def open(): Unit = ???
+   protected var aggregated = List.empty[(Tuple, Vector[Tuple])]
+
+
+  override def open(): Unit = {
+
+    input.open()
+    var next = input.next()
+    if (next == NilTuple && groupSet.isEmpty) {
+
+      aggregated = List(
+        (IndexedSeq.empty[Elem] -> Vector(aggCalls.map(aggEmptyValue).foldLeft(IndexedSeq.empty[Elem])((a, b) => a :+ b)
+        ))
+      )
+
+    } else {
+
+      val keyId = groupSet.toArray
+      var aggregatesMap = Map.empty[Tuple, Vector[Tuple]]
+      while (next != NilTuple) {
+        val tuple: Tuple = next.get
+        val key: Tuple = keyId.map(i => tuple(i))
+        aggregatesMap = aggregatesMap.get(key) match {
+          case Some(arr: Vector[Tuple]) => aggregatesMap + (key -> (arr :+ tuple))
+          case _                        => aggregatesMap + (key -> Vector(tuple))
+        }
+        next = input.next()
+      }
+
+      aggregated = aggregatesMap.toList
+    }
+
+
+  }
 
   /**
     * @inheritdoc
     */
-  override def next(): Option[Tuple] = ???
+  override def next(): Option[Tuple] = {
+
+    aggregated match {
+      case (key, tuples) :: tail =>
+        aggregated = tail
+        Some(key.++(aggCalls.map(agg => tuples.map(t => agg.getArgument(t)).reduce(aggReduce(_, _, agg)))))
+      case _ => NilTuple
+    }
+
+
+
+  }
 
   /**
     * @inheritdoc
     */
-  override def close(): Unit = ???
+  override def close(): Unit = {
+    input.close()
+  }
 }

@@ -2,7 +2,7 @@ package ch.epfl.dias.cs422.rel.early.volcano.late
 
 import ch.epfl.dias.cs422.helpers.builder.skeleton
 import ch.epfl.dias.cs422.helpers.builder.skeleton.logical.LogicalFetch
-import ch.epfl.dias.cs422.helpers.rel.RelOperator.{LateTuple, Tuple}
+import ch.epfl.dias.cs422.helpers.rel.RelOperator.{Elem, LateTuple, NilLateTuple, Tuple}
 import ch.epfl.dias.cs422.helpers.rel.late.volcano.naive.Operator
 import ch.epfl.dias.cs422.helpers.store.late.LateStandaloneColumnStore
 import org.apache.calcite.rel.`type`.RelDataType
@@ -22,20 +22,41 @@ class Fetch protected (
   lazy val evaluator: Tuple => Tuple =
     eval(projects.get.asScala.toIndexedSeq, fetchType)
 
-  /**
-    * @inheritdoc
-    */
-  override def open(): Unit = ???
+
+
+
+  override def open(): Unit = {
+    input.open()
+
+  }
 
   /**
     * @inheritdoc
     */
-  override def next(): Option[LateTuple] = ???
+  override def next(): Option[LateTuple] = {
+    var next_latetuple = input.next()
+
+      next_latetuple match {
+        case Some(lt) => {
+          var fetchCol = IndexedSeq(column.getElement(lt.vid).get)
+          if(projects.isDefined){
+            Option(LateTuple(lt.vid,  lt.value ++ evaluator(fetchCol)))
+          }else {
+            Option(LateTuple(lt.vid,  lt.value ++ fetchCol))
+          }
+        }
+        case _ => NilLateTuple
+      }
+
+  }
+
 
   /**
     * @inheritdoc
     */
-  override def close(): Unit = ???
+  override def close(): Unit = {
+    input.close()
+  }
 }
 
 object Fetch {

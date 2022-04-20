@@ -1,8 +1,9 @@
 package ch.epfl.dias.cs422.rel.early.volcano.late.qo
 
-import ch.epfl.dias.cs422.helpers.builder.skeleton.logical.LogicalStitch
+import ch.epfl.dias.cs422.helpers.builder.skeleton.logical.{LogicalFetch, LogicalStitch}
 import ch.epfl.dias.cs422.helpers.qo.rules.skeleton.LazyFetchRuleSkeleton
 import ch.epfl.dias.cs422.helpers.store.late.rel.late.volcano.LateColumnScan
+import ch.epfl.dias.cs422.rel.early.volcano.late.qo.LazyFetchRule.INSTANCE
 import org.apache.calcite.plan.{RelOptRuleCall, RelRule}
 import org.apache.calcite.rel.RelNode
 
@@ -18,7 +19,22 @@ class LazyFetchRule protected (config: RelRule.Config)
   extends LazyFetchRuleSkeleton(
     config
   ) {
-  override def onMatchHelper(call: RelOptRuleCall): RelNode = ???
+  override def onMatchHelper(call: RelOptRuleCall): RelNode = {
+//    val rules = call.getRelList()
+
+    val stitch: LogicalStitch = call.rel(0)
+    val relnode: RelNode = call.rel(1)
+    val latecolscan: LateColumnScan = call.rel(2)
+
+    val logicalfetch  = new LogicalFetch(
+      relnode,
+      latecolscan.getRowType,
+      latecolscan.getColumn,
+      None
+    )
+
+    logicalfetch
+  }
 }
 
 object LazyFetchRule {

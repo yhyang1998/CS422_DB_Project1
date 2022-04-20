@@ -1,7 +1,7 @@
 package ch.epfl.dias.cs422.rel.early.operatoratatime
 
 import ch.epfl.dias.cs422.helpers.builder.skeleton
-import ch.epfl.dias.cs422.helpers.rel.RelOperator.Column
+import ch.epfl.dias.cs422.helpers.rel.RelOperator.{Column, Tuple, Elem}
 import ch.epfl.dias.cs422.helpers.rex.AggregateCall
 import org.apache.calcite.util.ImmutableBitSet
 
@@ -31,5 +31,17 @@ class Aggregate protected (
   /**
    * @inheritdoc
    */
-  override def execute(): IndexedSeq[Column] = ???
+  override def execute(): IndexedSeq[Column] = {
+    val filtered_input = input.execute().transpose.filter(_.last.asInstanceOf[Boolean])   //don't care about the False Tuples
+    if (filtered_input.isEmpty && groupSet.isEmpty) {
+      IndexedSeq(aggCalls.map(aggEmptyValue).foldLeft(IndexedSeq.empty[Elem])((a, b) => a :+ b) :+ true
+      ).transpose
+    } else {
+      val keys = groupSet.toArray
+
+      filtered_input.map(_.toIndexedSeq).groupBy(tuple => keys.map(k => tuple(k)).toIndexedSeq)
+        .map {case (key, tuples) => key.++(aggCalls.map(agg => tuples.map(t => agg.getArgument(t)).reduce(aggReduce(_, _, agg)))) :+ true
+        }.toIndexedSeq.transpose
+    }
+  }
 }

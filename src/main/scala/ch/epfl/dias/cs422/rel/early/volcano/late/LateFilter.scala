@@ -1,7 +1,7 @@
 package ch.epfl.dias.cs422.rel.early.volcano.late
 
 import ch.epfl.dias.cs422.helpers.builder.skeleton
-import ch.epfl.dias.cs422.helpers.rel.RelOperator.{LateTuple, Tuple}
+import ch.epfl.dias.cs422.helpers.rel.RelOperator.{LateTuple, NilLateTuple, NilTuple, Tuple}
 import org.apache.calcite.rex.RexNode
 
 /**
@@ -29,15 +29,27 @@ class LateFilter protected (
   /**
     * @inheritdoc
     */
-  override def open(): Unit = ???
+  override def open(): Unit = {
+    input.open()
+  }
 
   /**
     * @inheritdoc
     */
-  override def next(): Option[LateTuple] = ???
+  override def next(): Option[LateTuple] = {
+    val next_latetuple = input.next()
+    val next_tuple = next_latetuple.map(t => t.value)
+    next_tuple match {
+      case NilTuple                 => NilLateTuple
+      case Some(t) if predicate(t)  => next_latetuple
+      case Some(_)                  => next()     //predicate(_) == false
+    }
+  }
 
   /**
     * @inheritdoc
     */
-  override def close(): Unit = ???
+  override def close(): Unit = {
+    input.close()
+  }
 }

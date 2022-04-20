@@ -31,5 +31,14 @@ class Project protected (
   /**
    * @inheritdoc
    */
-  def execute(): IndexedSeq[HomogeneousColumn] = ???
+  def execute(): IndexedSeq[HomogeneousColumn] = {
+
+    val executed_input = input.execute()
+    val left = executed_input.dropRight(1)
+    if (executed_input.isEmpty) {
+      executed_input
+    } else {
+      evals.map(e => e(left)) :+ executed_input.last
+    }
+  }
 }

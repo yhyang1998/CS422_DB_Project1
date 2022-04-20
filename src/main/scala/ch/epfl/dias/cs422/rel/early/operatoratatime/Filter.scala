@@ -29,5 +29,11 @@ class Filter protected (
   /**
    * @inheritdoc
    */
-  def execute(): IndexedSeq[Column] = ???
+  def execute(): IndexedSeq[Column] = {
+    val executed = input.execute()
+    val left = executed.dropRight(1)
+    val rightColumn = executed.last
+    left :+ left.transpose.zipWithIndex.map{ case (t, i) => rightColumn(i).asInstanceOf[Boolean] && predicate(t)}
+
+  }
 }

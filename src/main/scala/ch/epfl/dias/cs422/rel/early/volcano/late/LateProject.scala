@@ -1,7 +1,7 @@
 package ch.epfl.dias.cs422.rel.early.volcano.late
 
 import ch.epfl.dias.cs422.helpers.builder.skeleton
-import ch.epfl.dias.cs422.helpers.rel.RelOperator.{LateTuple, Tuple}
+import ch.epfl.dias.cs422.helpers.rel.RelOperator.{LateTuple, NilLateTuple, Tuple}
 import org.apache.calcite.rel.`type`.RelDataType
 import org.apache.calcite.rex.RexNode
 
@@ -32,19 +32,31 @@ class LateProject protected (
     */
   lazy val evaluator: Tuple => Tuple =
     eval(projects.asScala.toIndexedSeq, input.getRowType)
+  /**
+    * @inheritdoc
+    */
+  override def open(): Unit = {
+    input.open()
+  }
 
   /**
     * @inheritdoc
     */
-  override def open(): Unit = ???
+  override def next(): Option[LateTuple] = {
+    val next_latetuple = input.next()
 
+    next_latetuple match {
+      case Some(lt) => {
+        Option(LateTuple(lt.vid, evaluator(lt.value)))
+      }
+      case _ => NilLateTuple
+    }
+
+  }
   /**
     * @inheritdoc
     */
-  override def next(): Option[LateTuple] = ???
-
-  /**
-    * @inheritdoc
-    */
-  override def close(): Unit = ???
+  override def close(): Unit = {
+    input.close()
+  }
 }
